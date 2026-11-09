@@ -1,0 +1,9 @@
+# Caddy obtiene y renueva solo el certificado HTTPS (Let's Encrypt).
+# El dominio se toma de la variable KRONO_DOMAIN del archivo .env.
+{$KRONO_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy web:8080
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+	}
+}

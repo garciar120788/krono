@@ -1,0 +1,44 @@
+# Krono: organizador personal
+# Uso:  docker compose up -d --build
+# La app queda en http://IP-DE-LA-PC:8080
+
+name: krono
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: krono-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-krono}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en el archivo .env}
+      POSTGRES_DB: ${POSTGRES_DB:-krono}
+      TZ: ${TZ:-America/Mexico_City}
+    volumes:
+      - krono_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-krono} -d ${POSTGRES_DB:-krono}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    # La base de datos NO se expone fuera de Docker; solo la usa el contenedor web.
+
+  web:
+    build: .
+    image: krono-web:latest
+    container_name: krono-web
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-krono}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-krono}
+      AUTH_SECRET: ${AUTH_SECRET:?Define AUTH_SECRET en el archivo .env}
+      ALLOW_REGISTRATION: ${ALLOW_REGISTRATION:-true}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      TZ: ${TZ:-America/Mexico_City}
+    ports:
+      - "${WEB_PORT:-8080}:8080"
+
+volumes:
+  krono_db:
